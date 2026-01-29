@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNA Factory: Transcription & Translation Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .game-header {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin: 5px;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .game-area {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+        .phase-indicator {
+            text-align: center;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .dna-strand {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 80px;
+        }
+        .sequence-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        .bases {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .base {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .base:hover {
+            transform: scale(1.1);
+        }
+        .base.A { background: #FF6B6B; }
+        .base.T, .base.U { background: #4ECDC4; }
+        .base.G { background: #FFE66D; color: #333; }
+        .base.C { background: #95E1D3; color: #333; }
+        .base.selected {
+            transform: scale(1.15);
+            box-shadow: 0 0 20px rgba(255,255,255,0.8);
+        }
+        .base.correct {
+            animation: pulse 0.5s;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .base.wrong {
+            animation: shake 0.5s;
+            background: #dc3545 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .codon-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .codon {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 150px;
+            text-align: center;
+        }
+        .codon-bases {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .amino-acid {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            display: inline-block;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .info-panel h3 {
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        .info-panel ul {
+            list-style-position: inside;
+            line-height: 1.8;
+        }
+        .feedback {
+            text-align: center;
+            font-size: 1.3em;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            min-height: 50px;
+            font-weight: bold;
+        }
+        .feedback.success {
+            background: rgba(40, 167, 69, 0.3);
+        }
+        .feedback.error {
+            background: rgba(220, 53, 69, 0.3);
+        }
+        .lesson-box {
+            background: rgba(255, 215, 0, 0.2);
+            border-left: 4px solid #ffd700;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .protein-chain {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .character {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .character svg {
+            max-width: 150px;
+            height: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+        .character-label {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #ffd700;
+        }
+        .parts-display {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            gap: 20px;
+        }
+        .protein-result {
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .protein-result svg {
+            max-width: 200px;
+            margin: 20px auto;
+        }
+        .protein-description {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-top: 15px;
+            background: rgba(255,215,0,0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .base { width: 40px; height: 40px; font-size: 1.1em; }
+            button { padding: 12px 20px; font-size: 1em; }
+            .character svg { max-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 DNA Factory: Build Proteins!</h1>
+        
+        <div class="game-header">
+            <p style="text-align: center; font-size: 1.1em;">
+                Learn how cells turn DNA into proteins through transcription and translation!
+            </p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Level</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Proteins Made</div>
+                    <div class="stat-value" id="proteins">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <!-- Character Introductions -->
+            <div class="parts-display">
+                <div class="character">
+                    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- DNA Double Helix -->
+                        <path d="M20,10 Q30,30 20,50 Q30,70 20,90 Q30,110 20,130" 
+                              stroke="#FF6B6B" stroke-width="4" fill="none"/>
+                        <path d="M40,10 Q30,30 40,50 Q30,70 40,90 Q30,110 40,130" 
+                              stroke="#4ECDC4" stroke-width="4" fill="none"/>
+                        <!-- Connecting lines -->
+                        <line x1="20" y1="20" x2="40" y2="20" stroke="#FFE66D" stroke-width="2"/>
+                        <line x1="20" y1="40" x2="40" y2="40" stroke="#95E1D3" stroke-width="2"/>
+                        <line x1="20" y1="60" x2="40" y2="60" stroke="#FFE66D" stroke-width="2"/>
+                        <line x1="20" y1="80" x2="40" y2="80" stroke="#95E1D3" stroke-width="2"/>
+                        <!-- Happy face -->
+                        <circle cx="30" cy="100" r="2" fill="white"/>
+                        <circle cx="30" cy="105" r="1.5" fill="white"/>
+                    </svg>
+                    <div class="character-label">DNA</div>
+                </div>
+
+                <div class="character">
+                    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- mRNA strand -->
+                        <path d="M10,30 Q50,20 90,30 Q50,40 10,50 Q50,60 90,70" 
+                              stroke="#FF1493" stroke-width="5" fill="none" stroke-linecap="round"/>
+                        <!-- Bases along the strand -->
+                        <circle cx="30" cy="28" r="5" fill="#4ECDC4"/>
+                        <circle cx="50" cy="35" r="5" fill="#FF6B6B"/>
+                        <circle cx="70" cy="32" r="5" fill="#FFE66D"/>
+                        <!-- Cute face -->
+                        <circle cx="45" cy="80" r="2" fill="white"/>
+                        <circle cx="55" cy="80" r="2" fill="white"/>
+                        <path d="M40,90 Q50,95 60,90" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    </svg>
+                    <div class="character-label">mRNA</div>
+                </div>
+
+                <div class="character">
+                    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- tRNA cloverleaf shape -->
+                        <circle cx="50" cy="40" r="12" fill="#9b59b6" opacity="0.8"/>
+                        <circle cx="35" cy="60" r="10" fill="#9b59b6" opacity="0.8"/>
+                        <circle cx="65" cy="60" r="10" fill="#9b59b6" opacity="0.8"/>
+                        <circle cx="50" cy="75" r="8" fill="#9b59b6" opacity="0.8"/>
+                        <!-- Anticodon at bottom -->
+                        <rect x="45" y="85" width="4" height="15" fill="#e74c3c"/>
+                        <rect x="51" y="85" width="4" height="15" fill="#e74c3c"/>
+                        <!-- Amino acid on top -->
+                        <circle cx="50" cy="25" r="8" fill="#f39c12"/>
+                        <text x="50" y="29" text-anchor="middle" font-size="10" fill="white" font-weight="bold">AA</text>
+                        <!-- Eyes -->
+                        <circle cx="45" cy="38" r="2" fill="white"/>
+                        <circle cx="55" cy="38" r="2" fill="white"/>
+                    </svg>
+                    <div class="character-label">tRNA</div>
+                </div>
+
+                <div class="character">
+                    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Ribosome (two subunits) -->
+                        <ellipse cx="50" cy="40" rx="30" ry="20" fill="#3498db" opacity="0.9"/>
+                        <ellipse cx="50" cy="65" rx="35" ry="22" fill="#2980b9" opacity="0.9"/>
+                        <!-- Happy face on ribosome -->
+                        <circle cx="42" cy="38" r="3" fill="white"/>
+                        <circle cx="58" cy="38" r="3" fill="white"/>
+                        <path d="M40,48 Q50,53 60,48" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <!-- mRNA passing through -->
+                        <path d="M15,55 L85,55" stroke="#FF1493" stroke-width="3" fill="none"/>
+                    </svg>
+                    <div class="character-label">Ribosome</div>
+                </div>
+            </div>
+
+            <div class="phase-indicator" id="phase">Phase 1: Transcription</div>
+            
+            <div class="feedback" id="feedback"></div>
+
+            <!-- DNA Template -->
+            <div class="dna-strand">
+                <div class="sequence-title">🧬 DNA Template Strand</div>
+                <div class="bases" id="dnaStrand"></div>
+            </div>
+
+            <!-- mRNA Building Area -->
+            <div class="dna-strand" id="mrnaContainer" style="display: none;">
+                <div class="sequence-title">📝 Your mRNA (click bases above to build)</div>
+                <div class="bases" id="mrnaStrand"></div>
+            </div>
+
+            <!-- Available Bases -->
+            <div id="baseSelector" style="display: none;">
+                <div class="sequence-title" style="text-align: center;">Select the complementary base:</div>
+                <div class="bases" style="justify-content: center;">
+                    <div class="base A" onclick="selectBase('A')">A</div>
+                    <div class="base U" onclick="selectBase('U')">U</div>
+                    <div class="base G" onclick="selectBase('G')">G</div>
+                    <div class="base C" onclick="selectBase('C')">C</div>
+                </div>
+            </div>
+
+            <!-- Translation Phase -->
+            <div id="translationArea" style="display: none;">
+                <div class="dna-strand">
+                    <div class="sequence-title">🔬 mRNA Codons</div>
+                    <div class="codon-container" id="codonDisplay"></div>
+                </div>
+
+                <div class="dna-strand">
+                    <div class="sequence-title">🧪 tRNA Selection (pick the matching anticodon)</div>
+                    <div class="codon-container" id="trnaOptions"></div>
+                </div>
+
+                <div class="dna-strand">
+                    <div class="sequence-title">🧫 Your Protein Chain</div>
+                    <div class="protein-chain" id="proteinChain"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="startBtn" onclick="startGame()">Start New Game</button>
+                <button id="checkBtn" onclick="checkAnswer()" style="display: none;">Check Answer</button>
+                <button id="nextBtn" onclick="nextPhase()" style="display: none;">Continue to Translation</button>
+                <button id="hintBtn" onclick="showHint()">Show Hint</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>📚 How It Works:</h3>
+            <div class="lesson-box">
+                <strong>Phase 1 - Transcription (DNA → mRNA):</strong>
+                <ul>
+                    <li><strong>A pairs with U</strong> (not T in RNA!)</li>
+                    <li><strong>T pairs with A</strong></li>
+                    <li><strong>G pairs with C</strong></li>
+                    <li><strong>C pairs with G</strong></li>
+                </ul>
+            </div>
+            <div class="lesson-box">
+                <strong>Phase 2 - Translation (mRNA → Protein):</strong>
+                <ul>
+                    <li>mRNA is read in groups of 3 bases called <strong>codons</strong></li>
+                    <li>tRNA molecules bring amino acids that match each codon</li>
+                    <li>Amino acids link together to form a <strong>protein</strong>!</li>
+                    <li>Example: AUG = Methionine (Met), UUU = Phenylalanine (Phe)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const geneticCode = {
+            'UUU': 'Phe', 'UUC': 'Phe', 'UUA': 'Leu', 'UUG': 'Leu',
+            'UCU': 'Ser', 'UCC': 'Ser', 'UCA': 'Ser', 'UCG': 'Ser',
+            'UAU': 'Tyr', 'UAC': 'Tyr', 'UAA': 'STOP', 'UAG': 'STOP',
+            'UGU': 'Cys', 'UGC': 'Cys', 'UGA': 'STOP', 'UGG': 'Trp',
+            'CUU': 'Leu', 'CUC': 'Leu', 'CUA': 'Leu', 'CUG': 'Leu',
+            'CCU': 'Pro', 'CCC': 'Pro', 'CCA': 'Pro', 'CCG': 'Pro',
+            'CAU': 'His', 'CAC': 'His', 'CAA': 'Gln', 'CAG': 'Gln',
+            'CGU': 'Arg', 'CGC': 'Arg', 'CGA': 'Arg', 'CGG': 'Arg',
+            'AUU': 'Ile', 'AUC': 'Ile', 'AUA': 'Ile', 'AUG': 'Met',
+            'ACU': 'Thr', 'ACC': 'Thr', 'ACA': 'Thr', 'ACG': 'Thr',
+            'AAU': 'Asn', 'AAC': 'Asn', 'AAA': 'Lys', 'AAG': 'Lys',
+            'AGU': 'Ser', 'AGC': 'Ser', 'AGA': 'Arg', 'AGG': 'Arg',
+            'GUU': 'Val', 'GUC': 'Val', 'GUA': 'Val', 'GUG': 'Val',
+            'GCU': 'Ala', 'GCC': 'Ala', 'GCA': 'Ala', 'GCG': 'Ala',
+            'GAU': 'Asp', 'GAC': 'Asp', 'GAA': 'Glu', 'GAG': 'Glu',
+            'GGU': 'Gly', 'GGC': 'Gly', 'GGA': 'Gly', 'GGG': 'Gly'
+        };
+
+        const proteinInfo = [
+            {
+                name: "Insulin",
+                svg: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Insulin molecule as cute character -->
+                    <circle cx="100" cy="100" r="60" fill="#e74c3c" opacity="0.8"/>
+                    <circle cx="70" cy="85" r="8" fill="white"/>
+                    <circle cx="130" cy="85" r="8" fill="white"/>
+                    <circle cx="70" cy="85" r="4" fill="black"/>
+                    <circle cx="130" cy="85" r="4" fill="black"/>
+                    <path d="M80,110 Q100,125 120,110" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+                    <!-- Key symbol -->
+                    <circle cx="100" cy="140" r="12" fill="#f39c12"/>
+                    <rect x="98" y="140" width="4" height="20" fill="#f39c12"/>
+                    <rect x="98" y="155" width="8" height="3" fill="#f39c12"/>
+                    <text x="100" y="50" text-anchor="middle" font-size="16" fill="white" font-weight="bold">Insulin</text>
+                </svg>`,
+                description: "🔑 I'm the key that unlocks your cells to let sugar in! Without me, glucose would be stuck in your bloodstream. I help control your blood sugar levels and give your cells the energy they need!"
+            },
+            {
+                name: "Hemoglobin",
+                svg: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Hemoglobin as oxygen carrier -->
+                    <circle cx="100" cy="100" r="55" fill="#c0392b" opacity="0.9"/>
+                    <circle cx="80" cy="90" r="7" fill="white"/>
+                    <circle cx="120" cy="90" r="7" fill="white"/>
+                    <circle cx="80" cy="90" r="3" fill="black"/>
+                    <circle cx="120" cy="90" r="3" fill="black"/>
+                    <path d="M85,110 Q100,120 115,110" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+                    <!-- Oxygen molecules -->
+                    <circle cx="60" cy="60" r="8" fill="#3498db"/>
+                    <circle cx="140" cy="60" r="8" fill="#3498db"/>
+                    <text x="60" y="64" text-anchor="middle" font-size="10" fill="white" font-weight="bold">O₂</text>
+                    <text x="140" y="64" text-anchor="middle" font-size="10" fill="white" font-weight="bold">O₂</text>
+                    <text x="100" y="40" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Hemoglobin</text>
+                </svg>`,
+                description: "💨 I'm your oxygen delivery service! I live in your red blood cells and carry oxygen from your lungs to every part of your body. That's why blood is red - I contain iron that binds to oxygen!"
+            },
+            {
+                name: "Antibody",
+                svg: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Y-shaped antibody -->
+                    <path d="M100,140 L100,100 M100,100 L70,60 M100,100 L130,60" stroke="#9b59b6" stroke-width="12" fill="none" stroke-linecap="round"/>
+                    <!-- Binding sites -->
+                    <circle cx="70" cy="50" r="15" fill="#e74c3c" opacity="0.8"/>
+                    <circle cx="130" cy="50" r="15" fill="#e74c3c" opacity="0.8"/>
+                    <!-- Face in the middle -->
+                    <circle cx="100" cy="100" r="20" fill="#9b59b6" opacity="0.9"/>
+                    <circle cx="93" cy="97" r="3" fill="white"/>
+                    <circle cx="107" cy="97" r="3" fill="white"/>
+                    <path d="M93,107 Q100,112 107,107" stroke="white" stroke-width="2" fill="none"/>
+                    <!-- Germ being caught -->
+                    <circle cx="70" cy="35" r="8" fill="#27ae60" opacity="0.7"/>
+                    <text x="100" y="175" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Antibody</text>
+                </svg>`,
+                description: "🛡️ I'm your body's defender! I grab onto germs, viruses, and other invaders to mark them for destruction. My Y-shape has special grabbers on top that recognize and stick to bad guys!"
+            },
+            {
+                name: "Collagen",
+                svg: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Triple helix structure -->
+                    <path d="M60,30 Q70,60 60,90 Q70,120 60,150" stroke="#f39c12" stroke-width="5" fill="none"/>
+                    <path d="M80,30 Q70,60 80,90 Q70,120 80,150" stroke="#e67e22" stroke-width="5" fill="none"/>
+                    <path d="M100,30 Q90,60 100,90 Q90,120 100,150" stroke="#d35400" stroke-width="5" fill="none"/>
+                    <!-- Smiling face -->
+                    <circle cx="80" cy="100" r="25" fill="#f39c12" opacity="0.3"/>
+                    <circle cx="73" cy="95" r="4" fill="white"/>
+                    <circle cx="87" cy="95" r="4" fill="white"/>
+                    <path d="M73,105 Q80,110 87,105" stroke="white" stroke-width="2" fill="none"/>
+                    <!-- Strength symbol -->
+                    <text x="130" y="100" font-size="40" fill="white">💪</text>
+                    <text x="100" y="180" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Collagen</text>
+                </svg>`,
+                description: "💪 I'm the rope that holds you together! I make up your skin, bones, tendons, and ligaments. I'm the most abundant protein in your body - about 30% of all your proteins! I keep your skin elastic and your bones strong!"
+            },
+            {
+                name: "Enzyme",
+                svg: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pac-man style enzyme -->
+                    <path d="M100,100 L140,70 A50,50 0 1,1 140,130 Z" fill="#2ecc71" opacity="0.9"/>
+                    <!-- Eye -->
+                    <circle cx="100" cy="85" r="5" fill="white"/>
+                    <circle cx="100" cy="85" r="2" fill="black"/>
+                    <!-- Molecule being broken -->
+                    <circle cx="160" cy="85" r="10" fill="#e74c3c"/>
+                    <circle cx="160" cy="115" r="10" fill="#3498db"/>
+                    <line x1="160" y1="95" x2="160" y2="105" stroke="white" stroke-width="3" stroke-dasharray="2,2"/>
+                    <!-- Speed lines -->
+                    <line x1="130" y1="100" x2="145" y2="100" stroke="white" stroke-width="2"/>
+                    <text x="100" y="175" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Enzyme</text>
+                </svg>`,
+                description: "⚡ I'm a super-speedy helper! I speed up chemical reactions in your body - things that would take years happen in seconds with me! I can break down food, build new molecules, and help with thousands of reactions. And I never get tired - I can do the same job over and over!"
+            },
+            {
+                name: "Keratin",
+                svg: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Hair strand -->
+                    <path d="M100,30 Q95,70 100,110 Q105,150 100,180" stroke="#8B4513" stroke-width="8" fill="none" stroke-linecap="round"/>
+                    <path d="M80,35 Q75,75 80,115 Q85,155 80,185" stroke="#8B4513" stroke-width="6" fill="none" stroke-linecap="round"/>
+                    <path d="M120,35 Q115,75 120,115 Q125,155 120,185" stroke="#8B4513" stroke-width="6" fill="none" stroke-linecap="round"/>
+                    <!-- Cute face -->
+                    <circle cx="100" cy="90" r="22" fill="#DEB887" opacity="0.5"/>
+                    <circle cx="92" cy="85" r="3" fill="white"/>
+                    <circle cx="108" cy="85" r="3" fill="white"/>
+                    <path d="M92,97 Q100,102 108,97" stroke="white" stroke-width="2" fill="none"/>
+                    <!-- Sparkles -->
+                    <text x="140" y="50" font-size="20">✨</text>
+                    <text x="55" y="70" font-size="20">✨</text>
+                    <text x="100" y="25" text-anchor="middle" font-size="14" fill="white" font-weight="bold">Keratin</text>
+                </svg>`,
+                description: "✨ I make your hair, nails, and outer skin strong and protective! I'm super tough and waterproof. Your hair and nails are almost entirely made of me. I also help make your skin a good barrier against the outside world!"
+            }
+        ];
+
+        let gameState = {
+            phase: 'transcription',
+            dnaSequence: [],
+            mrnaSequence: [],
+            currentIndex: 0,
+            score: 0,
+            level: 1,
+            proteins: 0,
+            currentCodonIndex: 0,
+            proteinSequence: []
+        };
+
+        function generateDNA(length) {
+            const bases = ['A', 'T', 'G', 'C'];
+            let sequence = [];
+            // Start with a promoter-like sequence for realism
+            for (let i = 0; i < length; i++) {
+                sequence.push(bases[Math.floor(Math.random() * bases.length)]);
+            }
+            // Make sure the length is divisible by 3 for codons
+            while (sequence.length % 3 !== 0) {
+                sequence.push(bases[Math.floor(Math.random() * bases.length)]);
+            }
+            return sequence;
+        }
+
+        function getComplement(base, isRNA = false) {
+            const pairs = {
+                'A': isRNA ? 'U' : 'T',
+                'T': 'A',
+                'G': 'C',
+                'C': 'G'
+            };
+            return pairs[base];
+        }
+
+        function startGame() {
+            const length = 6 + (gameState.level - 1) * 3; // Increase length with level
+            gameState.dnaSequence = generateDNA(length);
+            gameState.mrnaSequence = [];
+            gameState.currentIndex = 0;
+            gameState.phase = 'transcription';
+            gameState.currentCodonIndex = 0;
+            gameState.proteinSequence = [];
+
+            // Remove previous protein result if it exists
+            const previousResult = document.querySelector('.protein-result');
+            if (previousResult) {
+                previousResult.remove();
+            }
+
+            document.getElementById('phase').textContent = 'Phase 1: Transcription (DNA → mRNA)';
+            document.getElementById('dnaStrand').innerHTML = '';
+            document.getElementById('mrnaStrand').innerHTML = '';
+            document.getElementById('proteinChain').innerHTML = '';
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('feedback').className = 'feedback';
+
+            gameState.dnaSequence.forEach(base => {
+                const div = document.createElement('div');
+                div.className = `base ${base}`;
+                div.textContent = base;
+                document.getElementById('dnaStrand').appendChild(div);
+            });
+
+            document.getElementById('mrnaContainer').style.display = 'block';
+            document.getElementById('baseSelector').style.display = 'block';
+            document.getElementById('translationArea').style.display = 'none';
+            document.getElementById('checkBtn').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'none';
+        }
+
+        function selectBase(base) {
+            if (gameState.phase !== 'transcription') return;
+            if (gameState.currentIndex >= gameState.dnaSequence.length) return;
+
+            const correctBase = getComplement(gameState.dnaSequence[gameState.currentIndex], true);
+            const baseDiv = document.createElement('div');
+            baseDiv.className = `base ${base}`;
+            baseDiv.textContent = base;
+
+            if (base === correctBase) {
+                baseDiv.classList.add('correct');
+                gameState.mrnaSequence.push(base);
+                document.getElementById('mrnaStrand').appendChild(baseDiv);
+                gameState.currentIndex++;
+                gameState.score += 10;
+                updateStats();
+
+                document.getElementById('feedback').textContent = `✅ Correct! ${gameState.dnaSequence[gameState.currentIndex - 1]} pairs with ${base}`;
+                document.getElementById('feedback').className = 'feedback success';
+
+                if (gameState.currentIndex >= gameState.dnaSequence.length) {
+                    setTimeout(() => {
+                        document.getElementById('feedback').textContent = '🎉 Transcription complete! Ready to translate?';
+                        document.getElementById('nextBtn').style.display = 'inline-block';
+                        document.getElementById('baseSelector').style.display = 'none';
+                    }, 1000);
+                }
+            } else {
+                baseDiv.classList.add('wrong');
+                document.getElementById('mrnaStrand').appendChild(baseDiv);
+                setTimeout(() => baseDiv.remove(), 500);
+                
+                document.getElementById('feedback').textContent = `❌ Wrong! ${gameState.dnaSequence[gameState.currentIndex]} should pair with ${correctBase}, not ${base}`;
+                document.getElementById('feedback').className = 'feedback error';
+            }
+        }
+
+        function nextPhase() {
+            gameState.phase = 'translation';
+            document.getElementById('phase').textContent = 'Phase 2: Translation (mRNA → Protein)';
+            document.getElementById('mrnaContainer').style.display = 'none';
+            document.getElementById('baseSelector').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('translationArea').style.display = 'block';
+            document.getElementById('feedback').textContent = 'Match each codon with its tRNA anticodon!';
+            document.getElementById('feedback').className = 'feedback';
+
+            // Display codons
+            const codonDisplay = document.getElementById('codonDisplay');
+            codonDisplay.innerHTML = '';
+            
+            for (let i = 0; i < gameState.mrnaSequence.length; i += 3) {
+                const codon = gameState.mrnaSequence.slice(i, i + 3).join('');
+                const codonDiv = document.createElement('div');
+                codonDiv.className = 'codon';
+                codonDiv.innerHTML = `
+                    <div>Codon ${i/3 + 1}</div>
+                    <div class="codon-bases">
+                        ${codon.split('').map(b => `<div class="base ${b}" style="width: 40px; height: 40px; font-size: 1.1em;">${b}</div>`).join('')}
+                    </div>
+                `;
+                codonDisplay.appendChild(codonDiv);
+            }
+
+            showNextCodon();
+        }
+
+        function showNextCodon() {
+            if (gameState.currentCodonIndex >= gameState.mrnaSequence.length / 3) {
+                completeProtein();
+                return;
+            }
+
+            const codonStart = gameState.currentCodonIndex * 3;
+            const codon = gameState.mrnaSequence.slice(codonStart, codonStart + 3).join('');
+            
+            // Create tRNA options
+            const trnaOptions = document.getElementById('trnaOptions');
+            trnaOptions.innerHTML = '';
+
+            // Correct anticodon
+            const anticodon = codon.split('').map(b => getAnticodon(b)).join('');
+            
+            // Generate some wrong options
+            const options = [anticodon];
+            while (options.length < 3) {
+                const wrongOption = generateWrongAnticodon(anticodon);
+                if (!options.includes(wrongOption)) {
+                    options.push(wrongOption);
+                }
+            }
+            
+            // Shuffle options
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(option => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'codon';
+                optionDiv.style.cursor = 'pointer';
+                optionDiv.innerHTML = `
+                    <div>tRNA Anticodon</div>
+                    <div class="codon-bases">
+                        ${option.split('').map(b => `<div class="base ${b}" style="width: 40px; height: 40px; font-size: 1.1em;">${b}</div>`).join('')}
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.9em;">(${geneticCode[codon] || '???'})</div>
+                `;
+                optionDiv.onclick = () => selectTRNA(option, anticodon, codon);
+                trnaOptions.appendChild(optionDiv);
+            });
+        }
+
+        function getAnticodon(base) {
+            const pairs = { 'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G' };
+            return pairs[base];
+        }
+
+        function generateWrongAnticodon(correct) {
+            const bases = ['A', 'U', 'G', 'C'];
+            let wrong = '';
+            for (let i = 0; i < 3; i++) {
+                const wrongBase = bases[Math.floor(Math.random() * bases.length)];
+                wrong += wrongBase;
+            }
+            return wrong;
+        }
+
+        function selectTRNA(selected, correct, codon) {
+            if (selected === correct) {
+                const aminoAcid = geneticCode[codon];
+                gameState.proteinSequence.push(aminoAcid);
+                
+                const aaDiv = document.createElement('div');
+                aaDiv.className = 'amino-acid';
+                aaDiv.textContent = aminoAcid;
+                document.getElementById('proteinChain').appendChild(aaDiv);
+
+                gameState.score += 20;
+                updateStats();
+
+                document.getElementById('feedback').textContent = `✅ Correct! Added ${aminoAcid} to the protein chain!`;
+                document.getElementById('feedback').className = 'feedback success';
+
+                gameState.currentCodonIndex++;
+                setTimeout(showNextCodon, 1500);
+            } else {
+                document.getElementById('feedback').textContent = `❌ Wrong anticodon! Try again.`;
+                document.getElementById('feedback').className = 'feedback error';
+            }
+        }
+
+        function completeProtein() {
+            gameState.proteins++;
+            gameState.level++;
+            updateStats();
+
+            // Pick a random protein to show
+            const randomProtein = proteinInfo[Math.floor(Math.random() * proteinInfo.length)];
+
+            // Create protein result display
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'protein-result';
+            resultDiv.innerHTML = `
+                <h2 style="color: #ffd700; margin-bottom: 15px;">🎊 Protein Complete!</h2>
+                <div style="font-size: 1.1em; margin-bottom: 15px;">
+                    Amino Acid Chain: <strong>${gameState.proteinSequence.join(' - ')}</strong>
+                </div>
+                <div style="margin: 20px 0;">
+                    ${randomProtein.svg}
+                </div>
+                <h3 style="color: #4ECDC4; margin: 15px 0;">Meet ${randomProtein.name}!</h3>
+                <div class="protein-description">
+                    ${randomProtein.description}
+                </div>
+            `;
+
+            // Insert before the controls
+            const controls = document.querySelector('.controls');
+            controls.parentNode.insertBefore(resultDiv, controls);
+
+            document.getElementById('translationArea').style.display = 'block';
+            document.getElementById('feedback').textContent = `Amazing work! You've successfully created a protein!`;
+            document.getElementById('feedback').className = 'feedback success';
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('startBtn').textContent = `Start Level ${gameState.level}`;
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('proteins').textContent = gameState.proteins;
+        }
+
+        function showHint() {
+            if (gameState.phase === 'transcription' && gameState.currentIndex < gameState.dnaSequence.length) {
+                const currentBase = gameState.dnaSequence[gameState.currentIndex];
+                const complement = getComplement(currentBase, true);
+                document.getElementById('feedback').textContent = `💡 Hint: ${currentBase} pairs with ${complement} in RNA`;
+                document.getElementById('feedback').className = 'feedback';
+            } else if (gameState.phase === 'translation') {
+                document.getElementById('feedback').textContent = `💡 Hint: Remember, tRNA anticodons are complementary to mRNA codons (A↔U, G↔C)`;
+                document.getElementById('feedback').className = 'feedback';
+            }
+        }
+
+        // Start with instructions
+        document.getElementById('feedback').textContent = 'Click "Start New Game" to begin building your first protein!';
+    </script>
+</body>
+</html>
